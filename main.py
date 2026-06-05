@@ -8,49 +8,19 @@ from telegram.ext import (
 BOT_TOKEN = "8837276103:AAFhMbiFNGgoh6z5Hb_pyrSGY4K5ejP-K_8"
 ADMIN_ID = 8678262416
 CHANNELS = ["@LoLo_funny2", "@LoLo_funny", "@LoLo_LoLo_Lo_Lo"]
+CARD_NUMBER = "6037701210299613"
+CARD_NAME = "بنیامین"
 
-GENDER, AGE, CITY = range(3)
+PLATFORM, AMOUNT, LINK = range(3)
+CHARGE_AMOUNT, CHARGE_RECEIPT = range(3, 5)
 
-users = {}
-active_chats = {}
-message_map = {}
+wallets = {}
+orders = {}
 
-CITIES = [
-    "تهران", "مشهد", "اصفهان", "کرج", "شیراز", "تبریز", "اهواز", "قم",
-    "کرمانشاه", "ارومیه", "رشت", "زاهدان", "همدان", "کرمان", "یزد",
-    "اردبیل", "بندرعباس", "اراک", "اسلامشهر", "زنجان", "سنندج", "قزوین",
-    "خرم‌آباد", "گرگان", "ساری", "بوشهر", "بجنورد", "سمنان", "شهرکرد",
-    "ایلام", "یاسوج", "بیرجند", "مهاباد", "خوی", "مراغه", "سبزوار",
-    "نیشابور", "آمل", "بابل", "قائم‌شهر", "لاهیجان", "انزلی", "خمین",
-    "نجف‌آباد", "کاشان", "دزفول", "آبادان", "خرمشهر", "بروجرد", "ملایر",
-    "تویسرکان", "نهاوند", "سقز", "مریوان", "بانه", "قروه", "دیواندره",
-    "پاوه", "جوانرود", "سرپل‌ذهاب", "اسلام‌آباد غرب", "بیجار", "شهریار",
-    "ورامین", "پاکدشت", "دماوند", "فیروزکوه", "رباط‌کریم", "ملارد",
-    "نظرآباد", "هشتگرد", "طالقان", "تنکابن", "رامسر", "چالوس", "نوشهر",
-    "بهشهر", "نکا", "جویبار", "فریدونکنار", "محمودآباد", "رودسر",
-    "صومعه‌سرا", "فومن", "شفت", "آستارا", "تالش", "ماسال", "رضوانشهر",
-    "گنبدکاووس", "علی‌آباد", "کردکوی", "بندرترکمن", "مینودشت",
-    "شاهرود", "دامغان", "گرمسار", "مهدیشهر", "میامی", "آران‌وبیدگل",
-    "بهبهان", "مسجدسلیمان", "شوشتر", "شوش", "ایذه", "رامهرمز", "آغاجاری",
-    "گچساران", "فسا", "جهرم", "لار", "لامرد", "داراب", "آباده", "مرودشت",
-    "صدرا", "زرقان", "نی‌ریز", "استهبان", "اقلید", "ممسنی", "کازرون",
-    "سیرجان", "رفسنجان", "بم", "جیرفت", "بافت", "زابل", "خاش", "ایرانشهر",
-    "چابهار", "نیکشهر", "میناب", "قشم", "کیش", "لنگه", "حاجی‌آباد",
-    "دیلم", "خارک", "گناوه", "دشتستان", "تنگستان", "دشتی", "جم",
-    "عسلویه", "نورآباد", "پلدختر", "ازنا", "الیگودرز", "دورود", "کوهدشت",
-    "سلسله", "رومشکان", "فلاورجان", "مبارکه", "خمینی‌شهر", "شاهین‌شهر",
-    "گلپایگان", "خوانسار", "اردستان", "نطنز", "تیران", "لنجان", "فریدن",
-    "چادگان", "دهاقان", "برخوار", "میمه", "سامان", "لردگان", "اردل",
-    "کوهرنگ", "فارسان", "بروجن", "هفشجان", "ملکشاهی", "آبدانان", "دره‌شهر",
-    "مهران", "دهلران", "چرداول", "شیروان", "فاروج", "مانه", "جاجرم",
-    "اسفراین", "درگز", "قوچان", "چناران", "تربت‌جام", "تربت‌حیدریه",
-    "کاشمر", "خلیل‌آباد", "فریمان", "طرقبه", "گناباد", "بردسکن",
-    "خواف", "رشتخوار", "سرخس", "تایباد", "باخرز", "زاوه", "کلات",
-    "هشترود", "میانه", "بستان‌آباد", "سراب", "هادیشهر", "جلفا",
-    "اهر", "هریس", "ورزقان", "کلیبر", "چاراویماق", "شبستر", "اسکو",
-    "بناب", "ملکان", "عجب‌شیر", "مراغه", "بوکان", "تکاب", "شاهین‌دژ",
-    "پیرانشهر", "نقده", "سردشت", "اشنویه", "سلماس"
-]
+def get_wallet(user_id):
+    if user_id not in wallets:
+        wallets[user_id] = 0
+    return wallets[user_id]
 
 async def check_membership(user_id, context):
     for channel in CHANNELS:
@@ -65,7 +35,6 @@ async def check_membership(user_id, context):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     is_member = await check_membership(user_id, context)
-
     if not is_member:
         keyboard = [
             [InlineKeyboardButton("📢 کانال ۱", url="https://t.me/LoLo_funny2")],
@@ -74,8 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("✅ عضو شدم", callback_data="check_join")]
         ]
         await update.message.reply_text(
-            "🚫 *دسترسی محدود!*\n\n"
-            "برای استفاده از ربات باید عضو کانال‌های زیر بشی 👇",
+            "🚫 *دسترسی محدود!*\n\nبرای استفاده از ربات باید عضو کانال‌های زیر بشی 👇",
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode="Markdown"
         )
@@ -93,242 +61,381 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     await show_main_menu_query(query, context)
 
 async def show_main_menu(update, context):
+    user_id = update.effective_user.id
+    balance = get_wallet(user_id)
     keyboard = [
-        [InlineKeyboardButton("💘 رُل‌یابی", callback_data="find_match")],
-        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")]
+        [InlineKeyboardButton("📦 ثبت سفارش", callback_data="new_order")],
+        [InlineKeyboardButton("💰 افزایش موجودی", callback_data="charge_wallet")],
+        [InlineKeyboardButton("👛 موجودی من", callback_data="my_wallet")],
+        [InlineKeyboardButton("📋 قوانین", callback_data="rules")],
+        [InlineKeyboardButton("👨‍💻 پشتیبانی", callback_data="support")]
     ]
     await update.message.reply_text(
-        "🔥 *به ربات رُل‌یابی خوش اومدی!*\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "💫 اینجا رُل واقعیت پیدا میشه!\n"
-        "━━━━━━━━━━━━━━━\n\n"
-        "چیکار میخوای بکنی؟ 👇",
+        f"💎 *به ربات فروش ممبر خوش اومدی!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👛 موجودی شما: *{balance} تومن*\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📌 *خدمات ما:*\n"
+        f"├ 📱 ممبر فیک تلگرام\n"
+        f"└ 📲 ممبر فیک روبیکا\n\n"
+        f"⚡️ تحویل سریع | 24 ساعته\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"یه گزینه انتخاب کن 👇",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
 async def show_main_menu_query(query, context):
+    user_id = query.from_user.id
+    balance = get_wallet(user_id)
     keyboard = [
-        [InlineKeyboardButton("💘 رُل‌یابی", callback_data="find_match")],
-        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")]
+        [InlineKeyboardButton("📦 ثبت سفارش", callback_data="new_order")],
+        [InlineKeyboardButton("💰 افزایش موجودی", callback_data="charge_wallet")],
+        [InlineKeyboardButton("👛 موجودی من", callback_data="my_wallet")],
+        [InlineKeyboardButton("📋 قوانین", callback_data="rules")],
+        [InlineKeyboardButton("👨‍💻 پشتیبانی", callback_data="support")]
     ]
     await query.message.reply_text(
-        "🔥 *به ربات رُل‌یابی خوش اومدی!*\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "💫 اینجا رُل واقعیت پیدا میشه!\n"
-        "━━━━━━━━━━━━━━━\n\n"
-        "چیکار میخوای بکنی؟ 👇",
+        f"💎 *به ربات فروش ممبر خوش اومدی!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👛 موجودی شما: *{balance} تومن*\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📌 *خدمات ما:*\n"
+        f"├ 📱 ممبر فیک تلگرام\n"
+        f"└ 📲 ممبر فیک روبیکا\n\n"
+        f"⚡️ تحویل سریع | 24 ساعته\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"یه گزینه انتخاب کن 👇",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
-async def find_match(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
+    balance = get_wallet(user_id)
     keyboard = [
-        [InlineKeyboardButton("👦 پسر", callback_data="gender_male")],
-        [InlineKeyboardButton("👧 دختر", callback_data="gender_female")]
+        [InlineKeyboardButton("💰 افزایش موجودی", callback_data="charge_wallet")],
+        [InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]
     ]
     await query.message.reply_text(
-        "💫 *مرحله ۱ از ۳*\n\n"
-        "جنسیتت چیه؟ 👇",
+        f"👛 *کیف پول شما:*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💰 موجودی: *{balance} تومن*\n"
+        f"━━━━━━━━━━━━━━━",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
-    return GENDER
 
-async def gender_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def charge_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    context.user_data['gender'] = 'male' if query.data == 'gender_male' else 'female'
     await query.message.reply_text(
-        "💫 *مرحله ۲ از ۳*\n\n"
-        "چند سالته؟\n"
-        "_(بین ۱۰ تا ۵۰ سال)_",
+        f"💰 *افزایش موجودی*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💳 شماره کارت: `{CARD_NUMBER}`\n"
+        f"👤 به نام: *{CARD_NAME}*\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"مبلغ مورد نظر رو بنویس 👇\n"
+        f"_(مثلاً: 50000)_",
         parse_mode="Markdown"
     )
-    return AGE
+    return CHARGE_AMOUNT
 
-async def age_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    age_text = update.message.text
-    if not age_text.isdigit():
+async def charge_amount_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if not text.isdigit():
         await update.message.reply_text("❌ فقط عدد بنویس!")
-        return AGE
-    age = int(age_text)
-    if age < 10 or age > 50:
-        await update.message.reply_text("❌ سن باید بین ۱۰ تا ۵۰ سال باشه!")
-        return AGE
-    context.user_data['age'] = age
+        return CHARGE_AMOUNT
+    context.user_data['charge_amount'] = int(text)
+    await update.message.reply_text(
+        f"✅ *مبلغ: {text} تومن*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"حالا تصویر رسید پرداخت رو بفرست 👇",
+        parse_mode="Markdown"
+    )
+    return CHARGE_RECEIPT
 
-    # ساخت کیبورد شهرها
-    keyboard = []
-    row = []
-    for i, city in enumerate(CITIES):
-        row.append(InlineKeyboardButton(city, callback_data=f"city_{city}"))
-        if len(row) == 3:
-            keyboard.append(row)
-            row = []
-    if row:
-        keyboard.append(row)
+async def charge_receipt_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    amount = context.user_data['charge_amount']
 
     await update.message.reply_text(
-        "💫 *مرحله ۳ از ۳*\n\n"
-        "از کدوم شهری؟ 👇",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
-    return CITY
-
-async def city_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    city = query.data.replace("city_", "")
-    context.user_data['city'] = city
-
-    user = query.from_user
-    context.user_data['username'] = user.username or "ندارد"
-
-    users[user.id] = {
-        'gender': context.user_data['gender'],
-        'age': context.user_data['age'],
-        'city': city,
-        'username': context.user_data['username']
-    }
-
-    gender = context.user_data['gender']
-
-    await query.message.reply_text(
-        "⏳ *داریم دنبال رُلت میگردیم...*\n\n"
+        "⏳ *رسیدت دریافت شد!*\n\n"
         "━━━━━━━━━━━━━━━\n"
-        "💫 کمی صبر کن، بهترین رُل رو پیدا میکنیم!\n"
+        "منتظر تایید ادمین باش 🙏\n"
         "━━━━━━━━━━━━━━━",
         parse_mode="Markdown"
     )
 
-    msg = await context.bot.send_message(
-        ADMIN_ID,
-        f"💘 *کاربر جدید وارد رُل‌یابی شد:*\n\n"
+    keyboard = [
+        [
+            InlineKeyboardButton("✅ تایید شارژ", callback_data=f"charge_confirm_{user.id}_{amount}"),
+            InlineKeyboardButton("❌ رد", callback_data=f"charge_reject_{user.id}")
+        ]
+    ]
+
+    caption = (
+        f"💰 *درخواست شارژ کیف پول:*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
         f"👤 آیدی: `{user.id}`\n"
-        f"🔗 یوزرنیم: @{context.user_data['username']}\n"
-        f"⚧ جنسیت: {'👦 پسر' if gender == 'male' else '👧 دختر'}\n"
-        f"🎂 سن: {context.user_data['age']}\n"
-        f"🏙 شهر: {city}\n\n"
-        f"👆 *روی این پیام Reply کن تا جواب بدی!*",
+        f"🔗 یوزرنیم: @{user.username or 'ندارد'}\n"
+        f"💵 مبلغ: {amount} تومن\n"
+        f"━━━━━━━━━━━━━━━"
+    )
+
+    if update.message.photo:
+        await context.bot.send_photo(
+            ADMIN_ID,
+            photo=update.message.photo[-1].file_id,
+            caption=caption,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    else:
+        await context.bot.send_message(
+            ADMIN_ID,
+            caption,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+
+    return ConversationHandler.END
+
+async def charge_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    parts = query.data.split("_")
+    user_id = int(parts[2])
+    amount = int(parts[3])
+
+    wallets[user_id] = get_wallet(user_id) + amount
+
+    await context.bot.send_message(
+        user_id,
+        f"✅ *موجودی شما شارژ شد!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💰 مبلغ افزوده شده: *{amount} تومن*\n"
+        f"👛 موجودی فعلی: *{wallets[user_id]} تومن*\n"
+        f"━━━━━━━━━━━━━━━",
+        parse_mode="Markdown"
+    )
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(f"✅ {amount} تومن به کیف پول کاربر اضافه شد!")
+
+async def charge_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = int(query.data.split("_")[2])
+
+    await context.bot.send_message(
+        user_id,
+        "❌ *شارژ کیف پول تایید نشد!*\n\n"
+        "━━━━━━━━━━━━━━━\n"
+        "رسید پرداخت تایید نشد.\n"
+        "لطفاً دوباره تلاش کن.\n"
+        "━━━━━━━━━━━━━━━",
+        parse_mode="Markdown"
+    )
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text("❌ شارژ رد شد!")
+
+async def new_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user_id = query.from_user.id
+    balance = get_wallet(user_id)
+
+    keyboard = [
+        [InlineKeyboardButton("📱 ممبر تلگرام", callback_data="platform_telegram")],
+        [InlineKeyboardButton("📲 ممبر روبیکا", callback_data="platform_rubika")],
+        [InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]
+    ]
+    await query.message.reply_text(
+        f"📦 *ثبت سفارش جدید*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👛 موجودی شما: *{balance} تومن*\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💰 *قیمت‌ها:*\n"
+        f"├ 📱 تلگرام: هر ۱۰۰ ممبر = ۱۵ تومن\n"
+        f"└ 📲 روبیکا: هر ۱۰۰ ممبر = ۳۰ تومن\n\n"
+        f"⚠️ حداقل سفارش: ۲۰۰۰ ممبر\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"پلتفرم رو انتخاب کن 👇",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+    return PLATFORM
+
+async def platform_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    platform = "تلگرام" if query.data == "platform_telegram" else "روبیکا"
+    price = 15 if query.data == "platform_telegram" else 30
+    context.user_data['platform'] = platform
+    context.user_data['price_per_100'] = price
+
+    await query.message.reply_text(
+        f"📦 *پلتفرم: {platform}*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"💰 قیمت: هر ۱۰۰ ممبر = {price} تومن\n"
+        f"⚠️ حداقل: ۲۰۰۰ ممبر\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"تعداد ممبر مورد نظرت رو بنویس 👇",
+        parse_mode="Markdown"
+    )
+    return AMOUNT
+
+async def amount_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    user_id = update.effective_user.id
+    if not text.isdigit():
+        await update.message.reply_text("❌ فقط عدد بنویس!")
+        return AMOUNT
+    amount = int(text)
+    if amount < 2000:
+        await update.message.reply_text("❌ حداقل سفارش ۲۰۰۰ ممبره!")
+        return AMOUNT
+
+    price_per_100 = context.user_data['price_per_100']
+    total = (amount // 100) * price_per_100
+    balance = get_wallet(user_id)
+
+    if balance < total:
+        await update.message.reply_text(
+            f"❌ *موجودی کافی نیست!*\n\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"💰 مبلغ سفارش: {total} تومن\n"
+            f"👛 موجودی شما: {balance} تومن\n"
+            f"━━━━━━━━━━━━━━━\n\n"
+            f"لطفاً اول موجودیت رو شارژ کن!",
+            parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+
+    context.user_data['amount'] = amount
+    context.user_data['total'] = total
+
+    await update.message.reply_text(
+        f"✅ *تعداد: {amount} ممبر*\n"
+        f"💰 *مبلغ کل: {total} تومن*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"لینک کانال یا گروهت رو بفرست 👇",
+        parse_mode="Markdown"
+    )
+    return LINK
+
+async def link_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    platform = context.user_data['platform']
+    amount = context.user_data['amount']
+    total = context.user_data['total']
+    link = update.message.text
+
+    wallets[user.id] = get_wallet(user.id) - total
+
+    await update.message.reply_text(
+        f"✅ *سفارش ثبت شد!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📱 پلتفرم: {platform}\n"
+        f"👥 تعداد: {amount} ممبر\n"
+        f"💰 مبلغ: {total} تومن\n"
+        f"👛 موجودی باقیمانده: {wallets[user.id]} تومن\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"⏳ سفارشت در حال انجامه!",
         parse_mode="Markdown"
     )
 
-    message_map[msg.message_id] = user.id
-
-    await asyncio.sleep(10)
-
-    active_chats[user.id] = True
-
-    keyboard = [[InlineKeyboardButton("❌ پایان چت", callback_data="end_chat")]]
     await context.bot.send_message(
-        user.id,
-        "💘 *رُلت پیدا شد!*\n\n"
-        "━━━━━━━━━━━━━━━\n"
-        "✨ حالا میتونید شروع به صحبت کنید!\n"
-        "━━━━━━━━━━━━━━━\n\n"
-        "برای پایان دادن به چت دکمه زیر رو بزن 👇",
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        ADMIN_ID,
+        f"🛒 *سفارش جدید!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"👤 آیدی: `{user.id}`\n"
+        f"🔗 یوزرنیم: @{user.username or 'ندارد'}\n"
+        f"📱 پلتفرم: {platform}\n"
+        f"👥 تعداد: {amount} ممبر\n"
+        f"💰 مبلغ: {total} تومن\n"
+        f"🔗 لینک: {link}\n"
+        f"━━━━━━━━━━━━━━━",
         parse_mode="Markdown"
     )
 
     return ConversationHandler.END
 
-async def end_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
-
-    if user_id in active_chats:
-        del active_chats[user_id]
-
+    keyboard = [[InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]]
     await query.message.reply_text(
-        "👋 *چت پایان یافت!*\n\n"
+        "📋 *قوانین و مقررات:*\n\n"
         "━━━━━━━━━━━━━━━\n"
-        "میتونی دوباره رُل‌یابی کنی 😊\n"
-        "━━━━━━━━━━━━━━━",
+        "✅ حداقل سفارش: ۲۰۰۰ ممبر\n"
+        "✅ پرداخت از کیف پول\n"
+        "✅ بعد از ثبت سفارش انجام میشه\n"
+        "❌ کنسلی نداریم\n"
+        "❌ استرداد وجه نداریم\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "💰 *قیمت‌ها:*\n"
+        "├ تلگرام: هر ۱۰۰ ممبر = ۱۵ تومن\n"
+        "└ روبیکا: هر ۱۰۰ ممبر = ۳۰ تومن",
+        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
 
-    await context.bot.send_message(
-        ADMIN_ID,
-        f"❌ کاربر `{user_id}` چت رو پایان داد.",
-        parse_mode="Markdown"
-    )
-
-async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    text = update.message.text
-
-    if user.id == ADMIN_ID:
-        if update.message.reply_to_message:
-            replied_id = update.message.reply_to_message.message_id
-            if replied_id in message_map:
-                target_id = message_map[replied_id]
-                await context.bot.send_message(
-                    target_id,
-                    f"💬 *رُلت:*\n{text}",
-                    parse_mode="Markdown"
-                )
-                await update.message.reply_text("✅ پیام فرستاده شد!")
-                return
-
-    if user.id in active_chats and active_chats[user.id]:
-        msg = await context.bot.send_message(
-            ADMIN_ID,
-            f"💬 *پیام از رُل:*\n\n"
-            f"آیدی: `{user.id}`\n"
-            f"پیام: {text}\n\n"
-            f"👆 Reply کن تا جواب بدی!",
-            parse_mode="Markdown"
-        )
-        message_map[msg.message_id] = user.id
-        await update.message.reply_text("✅ پیامت فرستاده شد!")
-
-async def my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def support(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
-
-    if user_id not in users:
-        await query.message.reply_text(
-            "❌ هنوز ثبت‌نام نکردی!\n\nبرو رُل‌یابی رو بزن 😊"
-        )
-        return
-
-    u = users[user_id]
+    keyboard = [[InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]]
     await query.message.reply_text(
-        f"👤 *پروفایل تو:*\n\n"
-        f"━━━━━━━━━━━━━━━\n"
-        f"⚧ جنسیت: {'👦 پسر' if u['gender'] == 'male' else '👧 دختر'}\n"
-        f"🎂 سن: {u['age']}\n"
-        f"🏙 شهر: {u['city']}\n"
-        f"━━━━━━━━━━━━━━━",
+        "👨‍💻 *پشتیبانی:*\n\n"
+        "━━━━━━━━━━━━━━━\n"
+        "برای ارتباط با پشتیبانی پیام بده 👇\n"
+        "━━━━━━━━━━━━━━━",
+        reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
+
+async def back_main(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await show_main_menu_query(query, context)
 
 def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
-    conv_handler = ConversationHandler(
-        entry_points=[CallbackQueryHandler(find_match, pattern="^find_match$")],
+    order_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(new_order, pattern="^new_order$")],
         states={
-            GENDER: [CallbackQueryHandler(gender_chosen, pattern="^gender_")],
-            AGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, age_received)],
-            CITY: [CallbackQueryHandler(city_chosen, pattern="^city_")],
+            PLATFORM: [CallbackQueryHandler(platform_chosen, pattern="^platform_")],
+            AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, amount_received)],
+            LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, link_received)],
         },
-        fallbacks=[]
+        fallbacks=[CallbackQueryHandler(back_main, pattern="^back_main$")]
+    )
+
+    charge_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(charge_wallet, pattern="^charge_wallet$")],
+        states={
+            CHARGE_AMOUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, charge_amount_received)],
+            CHARGE_RECEIPT: [
+                MessageHandler(filters.PHOTO, charge_receipt_received),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, charge_receipt_received)
+            ],
+        },
+        fallbacks=[CallbackQueryHandler(back_main, pattern="^back_main$")]
     )
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
-    app.add_handler(CallbackQueryHandler(my_profile, pattern="^my_profile$"))
-    app.add_handler(CallbackQueryHandler(end_chat, pattern="^end_chat$"))
-    app.add_handler(conv_handler)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
+    app.add_handler(CallbackQueryHandler(rules, pattern="^rules$"))
+    app.add_handler(CallbackQueryHandler(support, pattern="^support$"))
+    app.add_handler(CallbackQueryHandler(back_main, pattern="^back_main$"))
+    app.add_handler(CallbackQueryHandler(my_wallet, pattern="^my_wallet$"))
+    app.add_handler(CallbackQueryHandler(charge_confirm, pattern="^charge_confirm_"))
+    app.add_handler(CallbackQueryHandler(charge_reject, pattern="^charge_reject_"))
+    app.add_handler(order_conv)
+    app.add_handler(charge_conv)
 
     print("✅ ربات شروع به کار کرد!")
     app.run_polling()
