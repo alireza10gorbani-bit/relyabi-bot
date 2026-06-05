@@ -648,7 +648,9 @@ async def admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"❌ خطا: {e}")
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    from telegram.request import HTTPXRequest
+    request = HTTPXRequest(connect_timeout=30, read_timeout=30, write_timeout=30)
+    app = Application.builder().token(BOT_TOKEN).request(request).build()
 
     order_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(new_order, pattern="^new_order$")],
