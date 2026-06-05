@@ -307,6 +307,7 @@ async def link_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"⬇️ بعد از انجام سفارش دکمه رو بزن"
     )
 
+    sent = False
     for attempt in range(3):
         try:
             await context.bot.send_message(
@@ -314,11 +315,27 @@ async def link_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard),
                 parse_mode="Markdown"
             )
+            sent = True
             break
         except Exception as e:
             if attempt == 2:
                 print(f"خطا در ارسال سفارش به ادمین: {e}")
             await asyncio.sleep(1)
+
+    if not sent:
+        # برگشت پول
+        wallets[user.id] = get_wallet(user.id) + total
+        save_data()
+        del pending_orders[order_id]
+        await update.message.reply_text(
+            f"❌ *سفارش ثبت نشد!*\n\n"
+            f"━━━━━━━━━━━━━━━\n"
+            f"مشکل در ارتباط با ادمین\n"
+            f"💰 مبلغ {fmt(total)} تومن به کیف پولت برگشت\n"
+            f"━━━━━━━━━━━━━━━\n\n"
+            f"دوباره امتحان کن 🙏",
+            parse_mode="Markdown"
+        )
 
     return ConversationHandler.END
 
