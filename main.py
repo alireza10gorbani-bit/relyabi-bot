@@ -15,6 +15,8 @@ GENDER, AGE, CITY = range(3)
 users = {}
 waiting_male = []
 waiting_female = []
+active_chats = {}
+message_map = {}  # message_id -> user_id
 
 async def check_membership(user_id, context):
     for channel in CHANNELS:
@@ -113,7 +115,6 @@ async def age_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def city_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     context.user_data['city'] = update.message.text
-    context.user_data['user_id'] = user.id
     context.user_data['username'] = user.username or "ندارد"
 
     users[user.id] = {
@@ -125,84 +126,63 @@ async def city_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     gender = context.user_data['gender']
 
-    if gender == 'male':
-        waiting_male.append(user.id)
-    else:
-        waiting_female.append(user.id)
-
     await update.message.reply_text(
         "✅ ثبت‌نامت انجام شد!\n\n"
         "🔍 داریم دنبال رل مناسب میگردیم...\n"
-        "⏳ تا ۵ دقیقه صبر کن!"
+        "⏳ کمی صبر کن!"
     )
 
-    await context.bot.send_message(
+    msg = await context.bot.send_message(
         ADMIN_ID,
-        f"👤 کاربر جدید:\n"
+        f"💘 کاربر جدید:\n"
         f"آیدی: {user.id}\n"
         f"یوزرنیم: @{context.user_data['username']}\n"
         f"جنسیت: {'پسر' if gender == 'male' else 'دختر'}\n"
         f"سن: {context.user_data['age']}\n"
-        f"شهر: {context.user_data['city']}"
+        f"شهر: {context.user_data['city']}\n\n"
+        f"👆 روی این پیام Reply کن تا جواب بدی!"
     )
 
-    asyncio.create_task(find_partner(user.id, context))
-    return ConversationHandler.END
+    message_map[msg.message_id] = user.id
 
-async def find_partner(user_id, context):
-    await asyncio.sleep(300)
+    await asyncio.sleep(10)
 
-    if user_id not in users:
-        return
-
-    user = users[user_id]
-    gender = user['gender']
-
-    if gender == 'male' and waiting_female:
-        partner_id = waiting_female.pop(0)
-        if user_id in waiting_male:
-            waiting_male.remove(user_id)
-    elif gender == 'female' and waiting_male:
-        partner_id = waiting_male.pop(0)
-        if user_id in waiting_female:
-            waiting_female.remove(user_id)
-    else:
-        await context.bot.send_message(
-            user_id,
-            "😔 الان کسی پیدا نشد. بعداً دوباره امتحان کن!"
-        )
-        return
-
-    if partner_id not in users:
-        return
-
-    partner = users[partner_id]
-
-    msg1 = (
-        f"💘 رلت پیدا شد!\n\n"
-        f"جنسیت: {'پسر' if partner['gender'] == 'male' else 'دختر'}\n"
-        f"سن: {partner['age']}\n"
-        f"شهر: {partner['city']}\n"
-        f"یوزرنیم: @{partner['username']}"
-    )
-
-    msg2 = (
-        f"💘 رلت پیدا شد!\n\n"
-        f"جنسیت: {'پسر' if user['gender'] == 'male' else 'دختر'}\n"
-        f"سن: {user['age']}\n"
-        f"شهر: {user['city']}\n"
-        f"یوزرنیم: @{user['username']}"
-    )
-
-    await context.bot.send_message(user_id, msg1)
-    await context.bot.send_message(partner_id, msg2)
+    active_chats[user.id] = True
 
     await context.bot.send_message(
-        ADMIN_ID,
-        f"✅ match انجام شد!\n"
-        f"کاربر ۱: @{user['username']} ({user['city']})\n"
-        f"کاربر ۲: @{partner['username']} ({partner['city']})"
+        user.id,
+        "💘 رلت پیدا شد!\n\nحالا میتونید شروع به صحبت کنید! 😊"
     )
+
+    return ConversationHandler.END
+
+async def handle_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    text = update.message.text
+
+    # ادمین داره Reply میکنه
+    if user.id == ADMIN_ID:
+        if update.message.reply_to_message:
+            replied_id = update.message.reply_to_message.message_id
+            if replied_id in message_map:
+                target_id = message_map[replied_id]
+                await context.bot.send_message(
+                    target_id,
+                    f"💬 رلت: {text}"
+                )
+                await update.message.reply_text("✅ پیام فرستاده شد!")
+                return
+
+    # کاربر عادی پیام میده
+    if user.id in active_chats and active_chats[user.id]:
+        msg = await context.bot.send_message(
+            ADMIN_ID,
+            f"💬 پیام از رل:\n"
+            f"آیدی: {user.id}\n"
+            f"پیام: {text}"
+        )
+        message_map[msg.message_id] = user.id
+        await update.message.reply_text("✅ پیامت فرستاده شد!")
 
 async def my_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -238,6 +218,7 @@ def main():
     app.add_handler(CallbackQueryHandler(check_join_callback, pattern="^check_join$"))
     app.add_handler(CallbackQueryHandler(my_profile, pattern="^my_profile$"))
     app.add_handler(conv_handler)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_messages))
 
     print("✅ ربات شروع به کار کرد!")
     app.run_polling()
