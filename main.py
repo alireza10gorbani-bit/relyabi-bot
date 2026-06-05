@@ -6,7 +6,6 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes, ConversationHandler
 )
 
-# ==================== تنظیمات ====================
 BOT_TOKEN = "8837276103:AAFhMbiFNGgoh6z5Hb_pyrSGY4K5ejP-K_8"
 ADMIN_ID = 8678262416
 CHANNELS = ["@LoLo_funny2", "@LoLo_funny", "@LoLo_LoLo_Lo_Lo"]
@@ -62,7 +61,8 @@ async def check_join_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def show_main_menu(update, context):
     keyboard = [
         [InlineKeyboardButton("💘 رل‌یابی", callback_data="find_match")],
-        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")]
+        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")],
+        [InlineKeyboardButton("👻 ربات وحشتناک", url="https://t.me/LoaLo_ma_si_bot")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
@@ -73,7 +73,8 @@ async def show_main_menu(update, context):
 async def show_main_menu_query(query, context):
     keyboard = [
         [InlineKeyboardButton("💘 رل‌یابی", callback_data="find_match")],
-        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")]
+        [InlineKeyboardButton("👤 پروفایل من", callback_data="my_profile")],
+        [InlineKeyboardButton("👻 ربات وحشتناک", url="https://t.me/LoaLo_ma_si_bot")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.message.reply_text(
