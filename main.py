@@ -18,7 +18,6 @@ TICKET_MSG = 5
 
 wallets = {}
 referrals = {}
-tickets = {}
 
 def get_wallet(user_id):
     if user_id not in wallets:
@@ -227,7 +226,9 @@ async def amount_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ *تعداد: {amount} ممبر*\n"
         f"💰 *مبلغ: {fmt(total)} تومن*\n\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"لینک کانال یا گروهت رو بفرست 👇",
+        f"🔗 لینک عمومی کانال یا گروهت رو وارد کن\n"
+        f"_(مثال: t.me/yourchannel)_\n"
+        f"━━━━━━━━━━━━━━━",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -250,12 +251,19 @@ async def link_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💰 مبلغ: {fmt(total)} تومن\n"
         f"👛 موجودی باقیمانده: {fmt(wallets[user.id])} تومن\n"
         f"━━━━━━━━━━━━━━━\n\n"
-        f"⏳ سفارشت در حال انجامه!",
+        f"⏳ سفارشت در حال بررسی توسط ادمینه، به زودی انجام میشه!",
         parse_mode="Markdown"
     )
 
-    await context.bot.send_message(
-        ADMIN_ID,
+    # دکمه انجام سفارش برای ادمین — اطلاعات کامل در callback_data
+    keyboard = [[
+        InlineKeyboardButton(
+            "✅ انجام شد",
+            callback_data=f"order_done_{user.id}_{amount}_{platform[:3]}_{link[:40]}"
+        )
+    ]]
+
+    admin_text = (
         f"🛒 *سفارش جدید!*\n\n"
         f"━━━━━━━━━━━━━━━\n"
         f"👤 آیدی: `{user.id}`\n"
@@ -264,17 +272,70 @@ async def link_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👥 تعداد: {amount} ممبر\n"
         f"💰 مبلغ: {fmt(total)} تومن\n"
         f"🔗 لینک: {link}\n"
-        f"━━━━━━━━━━━━━━━",
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"⬇️ بعد از انجام سفارش دکمه رو بزن"
+    )
+
+    # ارسال با retry
+    for attempt in range(3):
+        try:
+            await context.bot.send_message(
+                ADMIN_ID,
+                admin_text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+            break
+        except Exception as e:
+            if attempt == 2:
+                print(f"خطا در ارسال سفارش به ادمین: {e}")
+            await asyncio.sleep(1)
+
+    return ConversationHandler.END
+
+async def order_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """ادمین دکمه انجام شد رو زد"""
+    query = update.callback_query
+    await query.answer("✅ سفارش تایید شد!")
+
+    parts = query.data.split("_")
+    # order_done_{user_id}_{amount}_{platform_short}_{link}
+    user_id = int(parts[2])
+    amount = parts[3]
+    platform_short = parts[4]
+    # لینک ممکنه چند بخش داشته باشه (به خاطر _ در لینک)
+    link = "_".join(parts[5:])
+
+    platform_full = "تلگرام" if platform_short == "تلگ" else "روبیکا"
+
+    # پیام تایید برای کاربر
+    await context.bot.send_message(
+        user_id,
+        f"🎉 *سفارش شما انجام شد!*\n\n"
+        f"━━━━━━━━━━━━━━━\n"
+        f"📱 پلتفرم: {platform_full}\n"
+        f"👥 تعداد: {amount} ممبر\n"
+        f"🔗 لینک کانال/گروه: {link}\n"
+        f"━━━━━━━━━━━━━━━\n\n"
+        f"✨ ممبرها به کانال یا گروهت اضافه شدن\n\n"
+        f"💙 ممنون از اعتمادت!\n"
+        f"هر مشکلی بود از بخش تیکت اطلاع بده 🙏",
         parse_mode="Markdown"
     )
-    return ConversationHandler.END
+
+    # ویرایش پیام ادمین — دکمه حذف بشه و وضعیت نشون بده
+    await query.edit_message_reply_markup(reply_markup=None)
+    await query.message.reply_text(
+        f"✅ *سفارش انجام شد و کاربر `{user_id}` مطلع شد!*",
+        parse_mode="Markdown"
+    )
+
+# ───────────────── شارژ کیف پول ─────────────────
 
 async def charge_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    keyboard = [
-        [InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]
-    ]
+    keyboard = [[InlineKeyboardButton("🏠 منوی اصلی", callback_data="back_main")]]
     await query.message.reply_text(
         f"💰 *افزایش موجودی*\n\n"
         f"━━━━━━━━━━━━━━━\n"
@@ -329,20 +390,28 @@ async def charge_receipt_received(update: Update, context: ContextTypes.DEFAULT_
         f"━━━━━━━━━━━━━━━"
     )
 
-    if update.message.photo:
-        await context.bot.send_photo(
-            ADMIN_ID,
-            photo=update.message.photo[-1].file_id,
-            caption=caption,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
-    else:
-        await context.bot.send_message(
-            ADMIN_ID, caption,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
+    for attempt in range(3):
+        try:
+            if update.message.photo:
+                await context.bot.send_photo(
+                    ADMIN_ID,
+                    photo=update.message.photo[-1].file_id,
+                    caption=caption,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode="Markdown"
+                )
+            else:
+                await context.bot.send_message(
+                    ADMIN_ID, caption,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode="Markdown"
+                )
+            break
+        except Exception as e:
+            if attempt == 2:
+                print(f"خطا در ارسال رسید به ادمین: {e}")
+            await asyncio.sleep(1)
+
     return ConversationHandler.END
 
 async def charge_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -370,11 +439,17 @@ async def charge_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = int(query.data.split("_")[2])
     await context.bot.send_message(
         user_id,
-        "❌ *شارژ تایید نشد!*\n\nلطفاً دوباره تلاش کن.",
+        "❌ *شارژ تایید نشد!*\n\n"
+        "━━━━━━━━━━━━━━━\n"
+        "🚫 توسط ادمین رد شد\n\n"
+        "برای اطلاعات بیشتر تیکت ارسال کنید 👇\n"
+        "━━━━━━━━━━━━━━━",
         parse_mode="Markdown"
     )
     await query.edit_message_reply_markup(reply_markup=None)
     await query.message.reply_text("❌ شارژ رد شد!")
+
+# ───────────────── کیف پول و معرفی ─────────────────
 
 async def my_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -418,6 +493,8 @@ async def referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+# ───────────────── تیکت ─────────────────
+
 async def new_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -425,7 +502,8 @@ async def new_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.message.reply_text(
         f"🎫 *ارسال تیکت*\n\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"مشکل یا سوالت رو بنویس 👇\n"
+        f"مشکل یا سوالت رو بنویس\n"
+        f"_(می‌تونی عکس هم بفرستی)_ 👇\n"
         f"━━━━━━━━━━━━━━━",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
@@ -434,25 +512,38 @@ async def new_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ticket_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    text = update.message.text
+    text = update.message.text or update.message.caption or "(بدون متن)"
 
     await update.message.reply_text(
-        f"✅ *تیکت ارسال شد!*\n\nبه زودی جواب میگیری 🙏",
+        "✅ *تیکت ارسال شد!*\n\nبه زودی جواب میگیری 🙏",
         parse_mode="Markdown"
     )
 
     keyboard = [[InlineKeyboardButton("💬 جواب دادن", callback_data=f"reply_ticket_{user.id}")]]
-    await context.bot.send_message(
-        ADMIN_ID,
+    caption_text = (
         f"🎫 *تیکت جدید!*\n\n"
         f"━━━━━━━━━━━━━━━\n"
         f"👤 آیدی: `{user.id}`\n"
         f"🔗 یوزرنیم: @{user.username or 'ندارد'}\n"
         f"📝 پیام:\n{text}\n"
-        f"━━━━━━━━━━━━━━━",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
+        f"━━━━━━━━━━━━━━━"
     )
+
+    if update.message.photo:
+        await context.bot.send_photo(
+            ADMIN_ID,
+            photo=update.message.photo[-1].file_id,
+            caption=caption_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
+    else:
+        await context.bot.send_message(
+            ADMIN_ID,
+            caption_text,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode="Markdown"
+        )
     return ConversationHandler.END
 
 async def reply_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -460,27 +551,73 @@ async def reply_ticket(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = int(query.data.split("_")[2])
     context.user_data['ticket_reply_to'] = user_id
-    await query.message.reply_text(
-        f"💬 جوابت رو بنویس 👇",
-        parse_mode="Markdown"
-    )
+    await query.message.reply_text("💬 جوابت رو بنویس 👇")
+
+# ───────────────── پیام‌های ادمین (جواب تیکت یا ریپلای) ─────────────────
 
 async def handle_admin_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    ادمین روی پیام سفارش/رسید ریپلای می‌زنه
+    یا از طریق دکمه جواب تیکت پیام میفرسته
+    """
     user = update.effective_user
     if user.id != ADMIN_ID:
         return
+
+    # جواب تیکت از طریق دکمه
     if 'ticket_reply_to' in context.user_data:
         target_id = context.user_data['ticket_reply_to']
         await context.bot.send_message(
             target_id,
             f"💬 *جواب تیکت شما:*\n\n"
             f"━━━━━━━━━━━━━━━\n"
-            f"{update.message.text}\n"
+            f"{update.message.text or update.message.caption or ''}\n"
             f"━━━━━━━━━━━━━━━",
             parse_mode="Markdown"
         )
         await update.message.reply_text("✅ جواب فرستاده شد!")
         del context.user_data['ticket_reply_to']
+        return
+
+    # ریپلای روی پیام سفارش یا رسید
+    if update.message.reply_to_message:
+        replied = update.message.reply_to_message
+        replied_text = replied.text or replied.caption or ""
+
+        # پیدا کردن آیدی کاربر از متن پیام اصلی
+        target_id = None
+        for line in replied_text.split("\n"):
+            if "آیدی:" in line:
+                try:
+                    target_id = int(line.split("`")[1])
+                except:
+                    pass
+
+        if target_id:
+            try:
+                if update.message.photo:
+                    await context.bot.send_photo(
+                        target_id,
+                        photo=update.message.photo[-1].file_id,
+                        caption=f"📩 *پیام از پشتیبانی:*\n{update.message.caption or ''}",
+                        parse_mode="Markdown"
+                    )
+                else:
+                    await context.bot.send_message(
+                        target_id,
+                        f"📩 *پیام از پشتیبانی:*\n\n"
+                        f"━━━━━━━━━━━━━━━\n"
+                        f"{update.message.text}\n"
+                        f"━━━━━━━━━━━━━━━",
+                        parse_mode="Markdown"
+                    )
+                await update.message.reply_text("✅ پیام برای کاربر فرستاده شد!")
+            except Exception as e:
+                await update.message.reply_text(f"❌ خطا: {e}")
+        else:
+            await update.message.reply_text("❌ آیدی کاربر پیدا نشد در این پیام!")
+
+# ───────────────── قوانین و پشتیبانی ─────────────────
 
 async def rules(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -553,7 +690,10 @@ def main():
     ticket_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(new_ticket, pattern="^new_ticket$")],
         states={
-            TICKET_MSG: [MessageHandler(filters.TEXT & ~filters.COMMAND, ticket_received)],
+            TICKET_MSG: [
+                MessageHandler(filters.PHOTO, ticket_received),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ticket_received)
+            ],
         },
         fallbacks=[CallbackQueryHandler(back_main, pattern="^back_main$")]
     )
@@ -568,10 +708,14 @@ def main():
     app.add_handler(CallbackQueryHandler(charge_confirm, pattern="^charge_confirm_"))
     app.add_handler(CallbackQueryHandler(charge_reject, pattern="^charge_reject_"))
     app.add_handler(CallbackQueryHandler(reply_ticket, pattern="^reply_ticket_"))
+    app.add_handler(CallbackQueryHandler(order_done, pattern="^order_done_"))
     app.add_handler(order_conv)
     app.add_handler(charge_conv)
     app.add_handler(ticket_conv)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_messages))
+    app.add_handler(MessageHandler(
+        (filters.TEXT | filters.PHOTO) & ~filters.COMMAND,
+        handle_admin_messages
+    ))
 
     print("✅ ربات شروع به کار کرد!")
     app.run_polling()
